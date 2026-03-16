@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de Chuvas - AgroSystem Pro</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a531f">
+
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2675/2675848.png">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+
+:root{
+--primary-color:#1a531f;
+--secondary-color:#004ba0;
+--bg-color:#f0f4f8;
+--whatsapp-color:#128c7e;
+--pdf-color:#c62828;
+--border-radius:12px;
+}
+
+body{
+font-family:Segoe UI, Arial, sans-serif;
+background:var(--bg-color);
+margin:0;
+padding:10px;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+.container{
+width:100%;
+max-width:480px;
+background:white;
+padding:20px;
+border-radius:var(--border-radius);
+box-shadow:0 8px 24px rgba(0,0,0,0.1);
+box-sizing:border-box;
+}
+
+h2{
+color:var(--primary-color);
+text-align:center;
+margin-bottom:20px;
+font-size:1.4em;
+}
+
+.input-group{
+display:flex;
+gap:8px;
+margin-bottom:20px;
+align-items:center;
+background:#fdfdfd;
+padding:12px;
+border-radius:var(--border-radius);
+border:1px solid #eee;
+}
+
+input{
+padding:12px 8px;
+border:1px solid #ddd;
+border-radius:8px;
+font-size:14px;
+min-width:0;
+}
+
+input[type="date"]{
+flex:1.8;
+}
+
+input[type="number"]{
+flex:1;
+}
+
+.btn-add{
+background:var(--primary-color);
+color:white;
+border:none;
+padding:12px 15px;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.stats{
+display:flex;
+justify-content:space-around;
+margin-bottom:20px;
+background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+padding:15px;
+border-radius:var(--border-radius);
+border:1px solid #a5d6a7;
+}
+
+.stat-item{
+text-align:center;
+}
+
+.stat-label{
+font-size:0.75em;
+color:#444;
+text-transform:uppercase;
+font-weight:bold;
+margin-bottom:4px;
+}
+
+.stat-value{
+font-size:1.2em;
+font-weight:800;
+color:var(--secondary-color);
+}
+
+.chart-container{
+height:250px;
+width:100%;
+margin-bottom:10px;
+background:#fff;
+padding:5px;
+box-sizing:border-box;
+}
+
+.table-container{
+overflow-x:auto;
+margin-top:5px;
+border-top:1px solid #eee;
+padding-top:10px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:0.75em;
+text-align:center;
+}
+
+th{
+padding:8px 2px;
+color:var(--primary-color);
+font-weight:bold;
+}
+
+td{
+padding:10px 2px;
+color:#555;
+font-weight:600;
+border-bottom:1px solid #f9f9f9;
+}
+
+.actions{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+margin-top:20px;
+}
+
+.btn-share{
+border:none;
+padding:14px;
+border-radius:10px;
+color:white;
+font-weight:bold;
+cursor:pointer;
+font-size:0.85em;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:6px;
+text-transform:uppercase;
+}
+
+.btn-pdf{
+background:var(--pdf-color);
+}
+
+.btn-whatsapp{
+background:var(--whatsapp-color);
+}
+
+.footer{
+margin-top:25px;
+text-align:center;
+font-size:0.9em;
+color:#666;
+border-top:1px solid #eee;
+padding-top:15px;
+}
+
+.btn-undo{
+background:none;
+color:#999;
+border:none;
+font-size:0.7em;
+cursor:pointer;
+margin-top:15px;
+text-decoration:underline;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container" id="conteudo-app">
+
+<h2>🌧️ Relatório de Chuvas</h2>
+
+<div class="input-group">
+
+<input type="date" id="dataChuva">
+<input type="number" id="valorChuva" placeholder="mm" step="0.1">
+
+<button class="btn-add" onclick="registrarChuva()">
+LANÇAR
+</button>
+
+</div>
+
+<div class="stats">
+
+<div class="stat-item">
+<div class="stat-label">No Mês</div>
+<div id="totalMes" class="stat-value">0 mm</div>
+</div>
+
+<div class="stat-item">
+<div class="stat-label">Total Ano</div>
+<div id="totalAno" class="stat-value">0 mm</div>
+</div>
+
+</div>
+
+<div class="chart-container">
+<canvas id="graficoChuvas"></canvas>
+</div>
+
+<div class="actions">
+
+<button class="btn-share btn-whatsapp" onclick="compartilharWhatsApp()">
+📲 WHATSAPP
+</button>
+
+<button class="btn-share btn-pdf" onclick="gerarPDF()">
+📄 GERAR PDF
+</button>
+
+</div>
+
+<div style="text-align:center">
+
+<button class="btn-undo" onclick="desfazerUltimo()">
+Remover último registro
+</button>
+
+</div>
+
+<div class="footer">
+Desenvolvido por <strong>João Divino Barbosa ® 2026</strong>
+</div>
+
+</div>
+
+<script>
+
+let dadosChuvas = JSON.parse(localStorage.getItem("dadosChuvas")) || [];
+
+const mesesSiglas = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+const ctx = document.getElementById("graficoChuvas").getContext("2d");
+
+let chart = new Chart(ctx,{
+type:"bar",
+data:{
+labels:mesesSiglas,
+datasets:[{
+data:new Array(12).fill(0),
+backgroundColor:"rgba(0,75,160,0.7)",
+borderColor:"#004ba0",
+borderWidth:1,
+borderRadius:6
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{display:false}},
+scales:{
+y:{beginAtZero:true},
+x:{grid:{display:false}}
+}
+}
+});
+
+function registrarChuva(){
+
+const data=document.getElementById("dataChuva").value;
+const valor=parseFloat(document.getElementById("valorChuva").value);
+
+if(!data || isNaN(valor)) return;
+
+dadosChuvas.push({data,valor});
+
+localStorage.setItem("dadosChuvas",JSON.stringify(dadosChuvas));
+
+atualizar();
+
+document.getElementById("valorChuva").value="";
+
+}
+
+function desfazerUltimo(){
+
+if(dadosChuvas.length>0){
+
+dadosChuvas.pop();
+
+localStorage.setItem("dadosChuvas",JSON.stringify(dadosChuvas));
+
+atualizar();
+
+}
+
+}
+
+function atualizar(){
+
+let totais=new Array(12).fill(0);
+let totalAno=0;
+
+dadosChuvas.forEach(reg=>{
+
+const d=new Date(reg.data+"T00:00:00");
+
+const m=d.getMonth();
+
+totais[m]+=reg.valor;
+
+totalAno+=reg.valor;
+
+});
+
+chart.data.datasets[0].data=totais;
+
+chart.update();
+
+document.getElementById("totalAno").innerText=totalAno.toFixed(1)+" mm";
+
+}
+
+function compartilharWhatsApp(){
+
+let totais=chart.data.datasets[0].data;
+
+let texto="Relatório de Chuvas - AgroSystem%0A%0A";
+
+mesesSiglas.forEach((m,i)=>{
+
+if(totais[i]>0){
+
+texto+=m+": "+totais[i].toFixed(1)+" mm%0A";
+
+}
+
+});
+
+window.open("https://api.whatsapp.com/send?text="+texto,"_blank");
+
+}
+
+async function gerarPDF(){
+
+const {jsPDF}=window.jspdf;
+
+const doc=new jsPDF();
+
+const elemento=document.getElementById("conteudo-app");
+
+await html2canvas(elemento).then(canvas=>{
+
+const img=canvas.toDataURL("image/png");
+
+doc.addImage(img,"PNG",10,10,190,0);
+
+doc.save("Relatorio_Chuvas.pdf");
+
+});
+
+}
+
+if("serviceWorker" in navigator){
+
+navigator.serviceWorker.register("sw.js");
+
+}
+
+document.getElementById("dataChuva").valueAsDate=new Date();
+
+atualizar();
+
+</script>
+
+</body>
+</html>
